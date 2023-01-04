@@ -1,0 +1,88 @@
+@startuml
+' autonumber
+!define SPRITESURL https://raw.githubusercontent.com/plantuml-stdlib/gilbarbara-plantuml-sprites/v1.0/sprites
+!includeurl SPRITESURL/git.puml
+!includeurl SPRITESURL/jenkins.puml
+!includeurl SPRITESURL/sonarqube.puml
+
+left to right direction
+
+skinparam RectangleBackgroundColor #fff
+skinparam RectangleFontColor #444
+skinparam ActorBorderColor black
+skinparam ActorBackgroundColor white
+
+caption Jenkins pipeline for CI
+
+actor "Engineer" as user_1
+actor "Engineer 2" as user_2
+
+rectangle "<$git>" as git
+rectangle "<$jenkins>" as jenkins
+
+rectangle "Static Analysis Tests" as static_analysis
+rectangle "Quality Tests" as quality_tests
+rectangle "Compile" as compile
+rectangle "Containerise" as containerise
+rectangle "Push to Staging Registry" as staging 
+rectangle "Scan Container Image" as scan
+rectangle "Push to Final Registry" as final
+
+
+together {
+    rectangle "unit tests" as unit_tests #Orange
+    rectangle "anti-pattern tests" as anti_pattern_tests #Orange
+    rectangle "style checker" as style_checker #Orange
+    rectangle "security tests" as security_tests #Orange
+}
+
+together {
+    rectangle "<$sonarqube> tests" as sonar_tests #Orange
+    rectangle "integration tests" as integration_tests #Orange
+}
+
+together {
+    rectangle "change log" as change_log #Orange
+    rectangle "dependency report" as dependency_report #Orange
+    rectangle "<$git> tag" as git_tag #Orange
+    rectangle "version artifact" as version_artifact #Orange
+}
+
+user_1 -[#black]-> git : pull request
+git  .[#black]left.> user_2 : peer review
+user_2  -[#black]-> git : approve
+user_1 -[#black]-> git : merge
+git  .[#black]left.> jenkins : trigger job
+
+jenkins -[#black]-> static_analysis : pipeline
+static_analysis -[#black]-> unit_tests
+static_analysis -[#black]-> anti_pattern_tests
+static_analysis -[#black]-> style_checker 
+static_analysis -[#black]-> security_tests 
+
+unit_tests  -[#black]-> quality_tests
+anti_pattern_tests  -[#black]-> quality_tests
+style_checker -[#black]-> quality_tests 
+security_tests -[#black]-> quality_tests 
+
+quality_tests -[#black]-> sonar_tests
+quality_tests -[#black]-> integration_tests
+
+sonar_tests -[#black]-> compile
+integration_tests -[#black]-> compile
+
+compile -[#black]-> change_log
+compile -[#black]-> dependency_report
+compile -[#black]-> git_tag
+compile -[#black]-> version_artifact
+
+change_log -[#black]-> containerise
+dependency_report -[#black]-> containerise
+git_tag -[#black]-> containerise
+version_artifact -[#black]-> containerise
+
+containerise -[#black]-> staging 
+staging -[#black]-> scan 
+scan -[#black]-> final
+
+@enduml
